@@ -1,104 +1,64 @@
 // services/telecomService.js
-// This file is primarily handled by TM2 (Backend & Telecom Architect)
-// You (Website Lead) will use makeOutgoingCall and generateVoiceResponse
+// This file is your mock telecom service for the MVP.
+// In a real scenario, this would integrate with Twilio/Exotel.
 
-const twilio = require('twilio'); // Install 'twilio' if you choose Twilio
-// const Exotel = require('exotel'); // Or Exotel client
-// const client = new twilio(process.env.TELECOM_ACCOUNT_SID, process.env.TELECOM_AUTH_TOKEN);
-// For hackathon, we'll use a mock client for now.
-const MOCK_TWILIO_CLIENT = {
+// A simple mock Twilio/Exotel client (no real API calls)
+const MOCK_TELECOM_CLIENT = {
     calls: {
         create: async ({ twiml, to, from }) => {
-            console.log(`[TelecomService Mock]: Initiating call from ${from} to ${to} with TwiML: ${twiml}`);
-            return { sid: 'SMOCK123ABC', status: 'queued' };
+            console.log(`[TelecomService Mock]: Simulating call from ${from} to ${to} with TwiML: ${twiml}`);
+            return { sid: 'SMOCK_CALL_SID_ABC', status: 'queued' };
         }
     },
     messages: {
         create: async ({ to, from, body }) => {
              console.log(`[TelecomService Mock]: Sending SMS from ${from} to ${to} with body: "${body}"`);
-             return { sid: 'MMOCK123ABC', status: 'queued' };
+             return { sid: 'MMOCK_SMS_SID_XYZ', status: 'queued' };
         }
     }
 };
-const client = MOCK_TWILIO_CLIENT; // Use mock client for MVP without real credentials initially
+const client = MOCK_TELECOM_CLIENT; // Use mock client for MVP
 
-// This function is used by your mentorController to make an outgoing call
+// This function is used by mentorController to simulate an outgoing call to mentee
 async function makeOutgoingCall(fromNumber, toNumber, message) {
     try {
-        // In a real scenario, the 'twiml' would be generated from the message here
-        // or directly passed if it's a complex flow.
         const twiml = `<Response><Say>${message}</Say></Response>`;
         const call = await client.calls.create({
             twiml: twiml,
             to: toNumber,
-            from: fromNumber // Your Twilio/Exotel number
+            from: fromNumber
         });
         return { success: true, sid: call.sid };
     } catch (error) {
-        console.error('Error making outgoing call:', error);
+        console.error('Error making outgoing call (Mock):', error);
         return { success: false, error: error.message };
     }
 }
 
-// This function will be called by webhookController to generate TwiML/ExoML response
-// based on text provided by AI.
+// This function is used by webhookController to generate TwiML/ExoML response
+// based on text provided by AI for the user's voice response.
 async function generateVoiceResponse(text, languageCode = 'en-IN') {
-    // TM1's aiService will actually generate the full TwiML/ExoML structure,
-    // but this provides a fallback or a way for TM2 to just generate a <Say> tag.
+    console.log(`[TelecomService Mock]: Generating voice response (TwiML/ExoML) for: "${text}" in ${languageCode}`);
+    // In real implementation, this would format the text for actual TTS or a specific TwiML/ExoML structure.
     return `<Response><Say language="${languageCode}">${text}</Say></Response>`;
 }
 
-// This function is the primary handler for incoming calls from telecom provider
-// TM2 will set up webhooks in Twilio/Exotel to hit a route in webhook.js,
-// and that route will call this function.
+// This function (if used) would handle incoming webhooks from Twilio/Exotel
+// For our current MVP, the webhookController.handleIncomingBasicPhoneRequest directly processes the classified data.
+// So this function is technically not used in the current flow from the telecom provider,
+// but its existence is useful for illustrating a fuller system.
+/*
 async function handleIncomingCallWebhook(payloadFromTelecomProvider) {
-    const aiService = require('./aiService'); // Lazy load to avoid circular dependency
-
-    const { From: phoneNumber, CallSid, SpeechResult, Language } = payloadFromTelecomProvider; // From Twilio
-    // For Exotel, payload structure will be different (e.g., CallDetails, UserInput)
-
-    console.log(`[Telecom Service]: Incoming call from ${phoneNumber}. Processing...`);
-
-    try {
-        // Step 1: Process voice input via AI service for classification
-        // TM1 will implement the real-time audio streaming/processing here
-        const { classification, twimlResponse } = await aiService.processVoiceInputAndClassify(
-            SpeechResult || '', // Use SpeechResult if Twilio provides it, or stream audio
-            Language || 'en-IN' // Use Language if Twilio provides it
-        );
-
-        // Step 2: Push classified data to your main backend (webhookController)
-        // This is the crucial handoff to your part of the system.
-        // TM2 will implement this POST request to your backend
-        const backendWebhookUrl = `http://localhost:${process.env.PORT}/api/webhooks/incoming-call-classified`; // YOUR ENDPOINT
-        const classifiedData = {
-            CallSid: CallSid,
-            From: phoneNumber,
-            To: process.env.TELECOM_PHONE_NUMBER,
-            CallStatus: 'completed_ai_assessment',
-            Transcription: classification.ai_transcript,
-            AI_Classification: classification,
-            AI_Response_TwiML: twimlResponse // The TwiML to play back
-        };
-
-        // This POST request is what TM2 will make to *your* backend.
-        // For MVP, we'll just log it. Your webhookController will actually receive it.
-        console.log("[Telecom Service]: Pushing classified data to your backend webhook:", classifiedData);
-        // In a real scenario, this would be an actual axios/fetch POST request
-        // await axios.post(backendWebhookUrl, classifiedData);
-
-        return twimlResponse; // Return the TwiML to Twilio/Exotel to continue the call
-
-    } catch (error) {
-        console.error('Error in handleIncomingCallWebhook:', error);
-        const errorMessage = "हमसे गलती हो गई है. कृपया फिर से प्रयास करें।"; // "We encountered an error. Please try again."
-        return await aiService.generateSimpleVoiceResponse(errorMessage, 'hi-IN'); // Fallback response
-    }
+    // This part would typically orchestrate ASR (e.g., calling Vosk server)
+    // and then pushing the classified data to your backend's webhookController.
+    // For MVP, webhookController.handleIncomingBasicPhoneRequest gets raw audio path directly.
+    console.log("[TelecomService Mock]: Handling incoming call webhook (this would contain raw audio/text from Twilio/Exotel)");
+    return `<Response><Say>Simulated processing. Please wait.</Say></Response>`;
 }
-
+*/
 
 module.exports = {
     makeOutgoingCall,
     generateVoiceResponse,
-    handleIncomingCallWebhook // For TM2's webhook route
+    // handleIncomingCallWebhook // Uncomment if you decide to use this
 };
