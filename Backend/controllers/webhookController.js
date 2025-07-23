@@ -1,12 +1,12 @@
 // controllers/webhookController.js
 const { IncomingMentorshipRequestDto } = require('../dtos/mentorshipDto');
-const telecomService = require('../services/telecomService'); // For generating final voice response
-const aiService = require('../services/aiService'); // For AI classification
-const asrService = require('../services/asrService'); // NEW: For ASR transcription
+const telecomService = require('../services/telecomService'); // For generating final voice response (mocked)
+const aiService = require('../services/aiService'); // For AI classification (Ollama)
+const asrService = require('../services/asrService'); // For ASR transcription (Vosk)
+const ttsService = require('../services/ttsService'); // NEW: For TTS generation (Coqui AI)
 
 exports.handleIncomingBasicPhoneRequest = async (req, res) => {
     const { Mentee, MentorshipRequest } = req.app.locals.db;
-    // Input now expects audioFilePath and phoneNumber, languageCode
     const { phoneNumber, audioFilePath, languageCode = 'en' } = req.body;
 
     console.log(`[Webhook Controller]: Received basic phone request from ${phoneNumber}. Audio file: "${audioFilePath}"`);
@@ -16,16 +16,19 @@ exports.handleIncomingBasicPhoneRequest = async (req, res) => {
     }
 
     let userTranscript = '';
-    let aiClassificationResult; // Declare variable here for wider scope
+    let aiClassificationResult;
+    let aiResponseText = '';
+    let aiResponseAudioPath = ''; // Variable to store the path of the generated audio file
 
     try {
         // Step 1: Transcribe Audio using Vosk (ASR)
-        const userTranscript = await asrService.transcribeAudio(audioFilePath, languageCode);
+        userTranscript = await asrService.transcribeAudio(audioFilePath, languageCode);
         console.log(`[Webhook Controller]: User Transcript from ASR: "${userTranscript}"`);
-        // Step 2: Use AI Service (Ollama) to classify the transcribed text
+
+        // Step 2: Use AI Service (Ollama LLM) to classify the transcribed text
         aiClassificationResult = await aiService.classifyUserRequest(userTranscript, languageCode);
-        // Ensure necessary fields are populated, even if AI fails classification cleanly
         const { requested_topic, requested_level, language_detected } = aiClassificationResult;
+        aiClassificationResult.ai_transcript = userTranscript;
 
         // Step 3: Find or Create Mentee
         let mentee = await Mentee.findOne({ where: { phone_number: phoneNumber } });
@@ -62,18 +65,45 @@ exports.handleIncomingBasicPhoneRequest = async (req, res) => {
 
         console.log(`[Webhook Controller]: New mentorship request created: ${newRequest.id} for ${phoneNumber} - Topic: ${requested_topic}`);
 
-        // Step 5: Generate voice response for the user based on AI classification (text then TTS)
-        const responseMessage = `नमस्ते! आपने ${requested_topic.replace(':', ' - ')} के बारे में पूछा है, स्तर ${requested_level} है। हम एक उपयुक्त मेंटर ढूंढ रहे हैं। कृपया प्रतीक्षा करें।`;
-        const twimlResponse = await telecomService.generateVoiceResponse(responseMessage, language_detected);
+        // Step 5: Generate AI's verbal confirmation response (text first)
+        aiResponseText = `नमस्ते! आपने ${requested_topic.replace(':', ' - ')} के बारे में पूछा है, स्तर ${requested_level} है। हम एक उपयुक्त मेंटर ढूंढ रहे हैं। कृपया प्रतीक्षा करें।`;
+        console.log(`[Webhook Controller]: AI Response Text: "${aiResponseText}"`);
 
-        res.type('text/xml').send(twimlResponse);
+        // Step 6: Generate Audio from AI's response text (TTS)
+        aiResponseAudioPath = await ttsService.generateSpeech(aiResponseText, language_detected);
+        console.log(`[Webhook Controller]: AI Response Audio Path: "${aiResponseAudioPath}"`);
+
+        // Step 7: Respond with generated audio path and classification details
+        res.json({
+            message: 'Request processed, classified, and audio response generated.',
+            audio_response_path: aiResponseAudioPath, // Send back the path to the audio file
+            ai_response_text: aiResponseText, // Also send the text for debugging/display
+            request_id: newRequest.id,
+            mentee_id: mentee.id,
+            classified_data: aiClassificationResult
+        });
 
     } catch (error) {
         console.error('Error in webhookController.handleIncomingBasicPhoneRequest:', error);
-        // Ensure languageCode is available for fallback
+        // Fallback response: If AI classification failed, use languageCode from request body
         const detectedLang = aiClassificationResult?.language_detected || languageCode || 'en-IN';
         const fallbackMessage = "क्षमा करें, आपके अनुरोध को संसाधित करने में हमें समस्या हुई। कृपया बाद में पुनः प्रयास करें।";
-        const fallbackVoiceResponse = await telecomService.generateVoiceResponse(fallbackMessage, detectedLang);
-        res.type('text/xml').status(500).send(fallbackVoiceResponse);
+        // Attempt to generate fallback voice response text
+        const fallbackVoiceResponseText = await aiService.generateSimpleTextResponse(fallbackMessage, detectedLang);
+        // Attempt to generate audio for fallback, but if TTS itself caused the error, this might fail too.
+        let fallbackAudioPath = '';
+        try {
+            fallbackAudioPath = await ttsService.generateSpeech(fallbackVoiceResponseText, detectedLang);
+        } catch (ttsFallbackError) {
+            console.error('TTS fallback audio generation failed:', ttsFallbackError);
+            fallbackAudioPath = 'Error generating fallback audio.';
+        }
+
+        res.status(500).json({
+            message: 'Server error processing request.',
+            ai_response_for_user: fallbackVoiceResponseText,
+            audio_response_path: fallbackAudioPath,
+            error: error.message
+        });
     }
 };
