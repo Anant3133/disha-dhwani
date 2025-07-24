@@ -1,10 +1,10 @@
-// routes/admin.js
 const express = require('express');
 const router = express.Router();
-// const adminController = require('../controllers/adminController'); // Will uncomment later
-// const { verifyToken, isAdmin } = require('../middleware/auth'); // Will uncomment later
+const adminController = require('../controllers/adminController');
 
-// Example protected route for admins
-// router.get('/users', verifyToken, isAdmin, adminController.getAllUsers);
+// Define the routes
+router.get('/mentors', adminController.getAllMentors);
+router.get('/mentees', adminController.getAllMentees);
+router.get('/requests', adminController.getAllRequests);
 
 module.exports = router;

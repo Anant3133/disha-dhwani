@@ -6,7 +6,7 @@ exports.getAllMentors = async (req, res) => {
     const { Mentor } = req.app.locals.db; // Access Mentor model
     try {
         const mentors = await Mentor.findAll({
-            attributes: ['id', 'name', 'email', 'contact_number', 'expertise_areas', 'status', 'is_admin', 'created_at']
+            attributes: ['id', 'name', 'email', 'contact_number', 'expertise_areas', 'status', 'created_at']
         });
         res.json(mentors.map(mentor => new MentorResponseDto(mentor)));
     } catch (error) {
