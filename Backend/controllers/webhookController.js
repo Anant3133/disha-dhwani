@@ -107,3 +107,72 @@ exports.handleIncomingBasicPhoneRequest = async (req, res) => {
         });
     }
 };
+
+// Example - Get MCQ prompts before the user speaks or clicks anything
+exports.getInitialMCQPrompts = async (req, res) => {
+    const { languageCode = 'en' } = req.query;
+
+    try {
+        const mcqData = await aiService.generateOnboardingMCQs(languageCode);
+        res.json({
+            message: "Fetched MCQ prompts for user onboarding.",
+            data: mcqData
+        });
+    } catch (err) {
+        console.error("Error generating MCQs from LLM:", err);
+        res.status(500).json({
+            message: "Failed to generate prompts.",
+            error: err.message
+        });
+    }
+};
+
+// New endpoint to handle mentee onboarding with MCQ answers
+exports.handleMenteeOnboarding = async (req, res) => {
+  const { Mentee, MentorshipRequest } = req.app.locals.db;
+  const { phoneNumber, topicKey, levelKey, languageKey } = req.body;
+
+  if (!phoneNumber || !topicKey || !levelKey || !languageKey) {
+    return res.status(400).json({ message: 'phoneNumber, topicKey, levelKey, and languageKey are required.' });
+  }
+
+  try {
+    let mentee = await Mentee.findOne({ where: { phone_number: phoneNumber } });
+    if (!mentee) {
+      mentee = await Mentee.create({
+        phone_number: phoneNumber,
+        current_learning_interest: topicKey,
+        learning_level: levelKey,
+        language_preference: languageKey,
+        status: 'active',
+      });
+    } else {
+      await mentee.update({
+        current_learning_interest: topicKey,
+        learning_level: levelKey,
+        language_preference: languageKey,
+        status: 'active',
+      });
+    }
+
+    const newRequest = await MentorshipRequest.create({
+      mentee_id: mentee.id,
+      requested_topic: topicKey,
+      requested_level: levelKey,
+      language_requested: languageKey,
+      ai_transcript: null,
+      ai_classification: { requested_topic: topicKey, requested_level: levelKey, language_detected: languageKey },
+      request_status: 'pending',
+      mentor_notes: `Onboarding MCQ selected: Topic=${topicKey}, Level=${levelKey}, Language=${languageKey}.`
+    });
+
+    res.json({
+      message: 'Mentee onboarding and mentorship request created successfully',
+      request_id: newRequest.id,
+      mentee_id: mentee.id
+    });
+  } catch (error) {
+    console.error('Error in handleMenteeOnboarding:', error);
+    res.status(500).json({ message: 'Server error processing mentee onboarding.' });
+  }
+};

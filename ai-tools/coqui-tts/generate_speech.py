@@ -3,6 +3,8 @@ import os
 import sys
 from TTS.api import TTS
 import traceback
+import torch 
+from TTS.tts.configs.xtts_config import XttsConfig
 
 # --- CONFIGURATION (Adjust these paths) ---
 DEFAULT_SPEAKER_WAV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "speakers", "default_speaker.wav")
