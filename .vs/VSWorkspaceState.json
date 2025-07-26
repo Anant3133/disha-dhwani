@@ -1,8 +1,8 @@
 {
   "ExpandedNodes": [
     "",
-    "\\ai-tools",
-    "\\ai-tools\\whisper.cpp"
+    "\\ai-tools"
   ],
+  "SelectedNode": "\\Backend",
   "PreviewInSolutionExplorer": false
 }
