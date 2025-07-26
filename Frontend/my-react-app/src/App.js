@@ -5,6 +5,8 @@ import './App.css';
 import './index.css'; 
 import AdminHome from './pages/AdminHome'; 
 import AdminDashboard from './pages/AdminDashboard';
+import AuthPage from './pages/AuthPage';
+import MenteeDashboard from './pages/MenteeDashboard';
 
 function App() {
   return (
@@ -14,6 +16,8 @@ function App() {
         <Routes>
           <Route path="/adminhome" element={<AdminHome />} />
           <Route path="/admindashboard" element={<AdminDashboard />} />
+          <Route path="/" element={<AuthPage />} />
+          <Route path="menteedashboard" element={<MenteeDashboard />} />
           {/* Add your routes here */}
           {/* Example route: <Route path="/" element={<Home />} /> */}
         </Routes>

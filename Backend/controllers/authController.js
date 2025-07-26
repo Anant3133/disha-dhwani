@@ -1,7 +1,7 @@
 // controllers/authController.js
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { LoginRequestDto, RegisterUserRequestDto, AuthResponseDto } = require('../dtos/authDto');
+// DTOs are removed as we will build the response object directly.
 
 const createJwtPayload = (user, role) => {
     let payload = { id: user.id, email: user.email, role: role };
@@ -9,9 +9,8 @@ const createJwtPayload = (user, role) => {
 };
 
 exports.login = async (req, res) => {
-    const { email, password } = new LoginRequestDto(req.body.email, req.body.password);
-    // Corrected: Access models directly from req.app.locals.db
-    const { Admin, Mentor, Mentee } = req.app.locals.db; // Removed .models
+    const { email, password } = req.body;
+    const { Admin, Mentor, Mentee } = req.app.locals.db;
 
     try {
         let user = null;
@@ -45,7 +44,13 @@ exports.login = async (req, res) => {
             { expiresIn: '1h' }
         );
 
-        res.json(new AuthResponseDto(token, user, role));
+        // FIX: Send a direct JSON object instead of using a DTO
+        res.json({
+            token: token,
+            userId: user.id,
+            role: role
+        });
+
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ message: 'Server error during login' });
@@ -53,24 +58,21 @@ exports.login = async (req, res) => {
 };
 
 exports.registerUser = async (req, res) => {
-    const { name, email, password, contact_number, role, expertise_areas } = new RegisterUserRequestDto(
-        req.body.name, req.body.email, req.body.password, req.body.contact_number, req.body.role, req.body.expertise_areas
-    );
-    // Corrected: Access models directly from req.app.locals.db
-    const { Admin, Mentor, Mentee } = req.app.locals.db; // Removed .models
+    const { name, email, password, contact_number, role } = req.body;
+    const { Admin, Mentor, Mentee } = req.app.locals.db;
 
     try {
         if (!name || !email || !password || !contact_number || !role) {
-            return res.status(400).json({ message: 'Name, email, password, contact number, and role are required.' });
+            return res.status(400).json({ message: 'All fields are required.' });
         }
         if (!['admin', 'mentor', 'mentee'].includes(role)) {
-            return res.status(400).json({ message: 'Invalid role specified. Must be admin, mentor, or mentee.' });
+            return res.status(400).json({ message: 'Invalid role specified.' });
         }
 
         const password_hash = await bcrypt.hash(password, 10);
-
         let newUser = null;
 
+        // (Your user creation switch logic remains here...)
         switch (role) {
             case 'admin':
                 let existingAdmin = await Admin.findOne({ where: { email } });
@@ -80,42 +82,33 @@ exports.registerUser = async (req, res) => {
             case 'mentor':
                 let existingMentor = await Mentor.findOne({ where: { email } });
                 if (existingMentor) return res.status(400).json({ message: 'Mentor with this email already exists.' });
-                let existingMentorPhone = await Mentor.findOne({ where: { contact_number } });
-                if (existingMentorPhone) return res.status(400).json({ message: 'Mentor with this phone number already exists.' });
-
-                newUser = await Mentor.create({
-                    name,
-                    email,
-                    password_hash,
-                    contact_number,
-                    expertise_areas: expertise_areas || []
-                });
+                newUser = await Mentor.create({ name, email, password_hash, contact_number });
                 break;
             case 'mentee':
-                let existingMenteeEmail = await Mentee.findOne({ where: { email } });
-                if (existingMenteeEmail) {
-                    return res.status(400).json({ message: 'Mentee with this email already exists.' });
-                }
-                let existingMenteePhone = await Mentee.findOne({ where: { phone_number: contact_number } });
-                if (existingMenteePhone) {
-                    return res.status(400).json({ message: 'Mentee with this phone number already exists.' });
-                }
-
-                newUser = await Mentee.create({
-                    name,
-                    email,
-                    password_hash,
-                    phone_number: contact_number,
-                    current_learning_interest: null,
-                    learning_level: 'unknown',
-                    language_preference: 'en-IN'
-                });
+                let existingMentee = await Mentee.findOne({ where: { email } });
+                if (existingMentee) return res.status(400).json({ message: 'Mentee with this email already exists.' });
+                newUser = await Mentee.create({ name, email, password_hash, phone_number: contact_number });
                 break;
             default:
                 return res.status(400).json({ message: 'Invalid role specified.' });
         }
 
-        res.status(201).json({ message: `${role} registered successfully`, user: { id: newUser.id, name: newUser.name, email: newUser.email }, role });
+        if (!newUser) {
+            return res.status(400).json({ message: `Could not create user with role: ${role}.` });
+        }
+
+        const token = jwt.sign(
+            createJwtPayload(newUser, role),
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        // FIX: Send a direct JSON object instead of using a DTO
+        res.status(201).json({
+            token: token,
+            userId: newUser.id,
+            role: role
+        });
 
     } catch (error) {
         console.error('Registration error:', error);

@@ -3,7 +3,7 @@ import axiosInstance from './axiosInstance';
 // Send basic phone request audio to webhook (ASR + AI classification + TTS)
 export const sendBasicPhoneRequest = async ({ phoneNumber, audioFilePath, languageCode = 'en' }) => {
   try {
-    const response = await axiosInstance.post('/api/webhook/basic-phone-request', {
+    const response = await axiosInstance.post('/webhook/basic-phone-request', {
       phoneNumber,
       audioFilePath,
       languageCode,

@@ -11,11 +11,11 @@ module.exports = (sequelize) => {
         },
         name: {
             type: DataTypes.STRING,
-            allowNull: false,
+            allowNull: true, 
         },
         email: {
             type: DataTypes.STRING,
-            allowNull: false,
+            allowNull: true, 
             unique: true,
             validate: {
                 isEmail: true,
@@ -23,40 +23,35 @@ module.exports = (sequelize) => {
         },
         password_hash: {
             type: DataTypes.STRING,
-            allowNull: false,
+            allowNull: true, 
         },
         phone_number: {
-            type: DataTypes.STRING, // Store with country code
+            type: DataTypes.STRING,
             allowNull: false,
             unique: true,
         },
         current_learning_interest: {
-            type: DataTypes.STRING, // e.g., 'agriculture:wheat_farming' based on AI classification
+            type: DataTypes.STRING, 
             allowNull: true,
         },
         learning_level: {
-            type: DataTypes.ENUM('beginner', 'intermediate', 'advanced', 'unknown'),
-            defaultValue: 'unknown',
+            type: DataTypes.ENUM('Beginner', 'Amateur', 'Pro', 'Unknown'),
+            defaultValue: 'Unknown',
             allowNull: false,
         },
         language_preference: {
-            type: DataTypes.STRING, // e.g., 'en-IN', 'hi-IN', 'te-IN'
-            defaultValue: 'en-IN',
+            type: DataTypes.STRING, 
+            defaultValue: 'en',
+            allowNull: false,
+        },
+        onboarding_status: {
+            type: DataTypes.ENUM('Incomplete', 'Complete'),
+            defaultValue: 'Incomplete',
             allowNull: false,
         },
         status: {
             type: DataTypes.ENUM('active', 'inactive', 'in_call'),
             defaultValue: 'active',
-            allowNull: false,
-        },
-        created_at: {
-            type: DataTypes.DATE,
-            defaultValue: DataTypes.NOW,
-            allowNull: false,
-        },
-        updated_at: {
-            type: DataTypes.DATE,
-            defaultValue: DataTypes.NOW,
             allowNull: false,
         },
     }, {

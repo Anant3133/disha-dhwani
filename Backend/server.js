@@ -15,7 +15,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // For URL-encoded request bodies (crucial for webhooks)
 
 // Database Synchronization
-db.sequelize.sync({ force: true }) // WARNING: force: true DROPS existing tables!
+db.sequelize.sync() // WARNING: force: true DROPS existing tables!
     .then(() => {
         console.log('Database & tables created/synced successfully with Sequelize!');
         console.log('Models loaded into db.models:', Object.keys(db));
@@ -34,13 +34,19 @@ const mentorRoutes = require('./routes/mentor'); // Will contain mentor-specific
 const adminRoutes = require('./routes/admin');   // Will contain admin-specific APIs
 const menteeRoutes = require('./routes/mentee'); // Will contain mentee-specific APIs
 const webhookRoutes = require('./routes/webhook'); // For AI/Telecom webhooks
+const ttsRoutes = require('./routes/tts');
+const sttRoutes = require('./routes/stt');
+const aiRoutes = require('./routes/ai');
 
 // Use Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/mentor', mentorRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/mentee', menteeRoutes); // New route prefix for mentee-specific APIs
+app.use('/api/mentees', menteeRoutes); // New route prefix for mentee-specific APIs
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/tts', ttsRoutes);
+app.use('/api/stt', sttRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Basic Test Route
 app.get('/', (req, res) => {

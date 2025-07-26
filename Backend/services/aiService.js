@@ -2,7 +2,7 @@
 const axios = require('axios'); // npm install axios
 
 const OLLAMA_API_URL = process.env.OLLAMA_API_URL || 'http://localhost:11434/api/generate';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3'; // or 'gemma:2b' if using that
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'gemma:2b'; // or 'gemma:2b' if using that
 
 // Classify user's request (from rural India) into topic and level
 async function classifyUserRequest(userText, language = 'en-IN') {
@@ -136,6 +136,108 @@ ${inputText}`;
     }
 }
 
+const onboardingPrompts = {
+    'en': [
+        {
+            id: 'language_preference',
+            question: "First, in which language would you like to continue?",
+            options: [
+                { key: 'en', label: 'English' },
+                { key: 'hi', label: 'हिन्दी (Hindi)' },
+                { key: 'te', label: 'తెలుగు (Telugu)' },
+            ]
+        },
+        {
+            id: 'current_learning_interest',
+            question: "What topic are you interested in learning about?",
+            options: [
+                { key: 'Agriculture', label: 'Agriculture (खेती)' },
+                { key: 'Literacy', label: 'Reading & Writing (पढ़ाई-लिखाई)' },
+                { key: 'Health', label: 'Health & Hygiene (स्वास्थ्य)' },
+                { key: 'Vocational', label: 'Job Skills (कामकाज)' }
+            ]
+        },
+        {
+            id: 'learning_level',
+            question: "How would you describe your current skill level in this topic?",
+            options: [
+                { key: 'Beginner', label: 'I am a Beginner (शुरुआती)' },
+                { key: 'Amateur', label: 'I have some knowledge (जानकार)' },
+                { key: 'Pro', label: 'I am an expert (माहिर)' }
+            ]
+        }
+    ],
+    'hi': [
+        {
+            id: 'language_preference',
+            question: "सबसे पहले, आप किस भाषा में आगे बढ़ना चाहेंगे?",
+            options: [
+                { key: 'en', label: 'English (अंग्रेज़ी)' },
+                { key: 'hi', label: 'हिन्दी' },
+                { key: 'te', label: 'తెలుగు (तेलुगु)' },
+            ]
+        },
+        {
+            id: 'current_learning_interest',
+            question: "आप किस विषय के बारे में सीखने में रुचि रखते हैं?",
+            options: [
+                { key: 'Agriculture', label: 'खेती (Agriculture)' },
+                { key: 'Literacy', label: 'पढ़ाई-लिखाई (Reading & Writing)' },
+                { key: 'Health', label: 'स्वास्थ्य (Health & Hygiene)' },
+                { key: 'Vocational', label: 'कामकाज (Job Skills)' }
+            ]
+        },
+        {
+            id: 'learning_level',
+            question: "इस विषय में आप अपने कौशल स्तर का वर्णन कैसे करेंगे?",
+            options: [
+                { key: 'Beginner', label: 'मैं शुरुआती हूँ (Beginner)' },
+                { key: 'Amateur', label: 'मुझे कुछ ज्ञान है (Amateur)' },
+                { key: 'Pro', label: 'मैं माहिर हूँ (Pro)' }
+            ]
+        }
+    ],
+    'te': [
+        {
+            id: 'language_preference',
+            question: "మొదట, మీరు ఏ భాషలో కొనసాగాలనుకుంటున్నారు?",
+            options: [
+                { key: 'en', label: 'English (ఆంగ్లము)' },
+                { key: 'hi', label: 'हिन्दी (హిందీ)' },
+                { key: 'te', label: 'తెలుగు' },
+            ]
+        },
+        {
+            id: 'current_learning_interest',
+            question: "మీరు ఏ అంశం గురించి తెలుసుకోవడానికి ఆసక్తిగా ఉన్నారు?",
+            options: [
+                { key: 'Agriculture', label: 'వ్యవసాయం (Agriculture)' },
+                { key: 'Literacy', label: 'చదవడం & రాయడం (Reading & Writing)' },
+                { key: 'Health', label: 'ఆరోగ్యం (Health & Hygiene)' },
+                { key: 'Vocational', label: 'ఉద్యోగ నైపుణ్యాలు (Job Skills)' }
+            ]
+        },
+        {
+            id: 'learning_level',
+            question: "ఈ అంశంలో మీ ప్రస్తుత నైపుణ్యం స్థాయిని మీరు ఎలా వివరిస్తారు?",
+            options: [
+                { key: 'Beginner', label: 'నేను ప్రారంభకుడిని (Beginner)' },
+                { key: 'Amateur', label: 'నాకు కొంత పరిజ్ఞానం ఉంది (Amateur)' },
+                { key: 'Pro', label: 'నేను నిపుణుడిని (Pro)' }
+            ]
+        }
+    ]
+};
+
+/**
+ * Retrieves the static list of onboarding questions for a given language.
+ * @param {string} languageCode - The language code ('en', 'hi', 'te').
+ * @returns {Promise<Array>} A promise that resolves to the array of prompt objects.
+ */
+async function getOnboardingPrompts(languageCode = 'en') {
+    return onboardingPrompts[languageCode] || onboardingPrompts['en'];
+}
+
 // NEW: Generate onboarding MCQs with fixed options for mentee bucketing
 async function generateOnboardingMCQs(languageCode = 'en') {
     const prompt = `
@@ -206,6 +308,7 @@ Language: ${languageCode}
 
 module.exports = {
     classifyUserRequest,
+    getOnboardingPrompts,
     generateSimpleTextResponse,
     generateMCQs,
     generateOnboardingMCQs
