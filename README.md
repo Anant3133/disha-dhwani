@@ -4,4 +4,5 @@ Our mission is to provide intelligent, localized mentorship directly via basic m
 This repository contains the full project, designed for impact and scalability.
 
 Cocise version-( https://docs.google.com/document/d/1uIxJuETiWyLJweiLu9oslTmEQMoAn1LE7Z3mUhFyprI/edit?usp=sharing )
+
 Detailed version- ( https://docs.google.com/document/d/1RqsyrT9HPlq06Lc7xnhRHMIV2ZFoN1N8K21aRPipbLM/edit?usp=sharing)
